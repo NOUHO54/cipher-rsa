@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cipher — Chiffrement RSA</title>
+<script src="https://cdn.jsdelivr.net/npm/jsencrypt@latest/bin/jsencrypt.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e4e7ec;
+    --text: #101828;
+    --text-muted: #667085;
+    --accent: #1d4ed8;
+    --accent-hover: #1e40af;
+    --success: #067647;
+    --danger: #b42318;
+    --radius: 8px;
+    --shadow: 0 1px 2px rgba(16,24,40,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* ---------- HEADER ---------- */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .logo svg { width: 22px; height: 22px; }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #d0d5dd;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  .status-dot.active { background: var(--success); }
+  /* ---------- LAYOUT ---------- */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 32px 64px;
+  }
+  .page-title {
+    margin-bottom: 4px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .page-sub {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  /* ---------- CARD ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .card-step {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: #f2f4f7;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card-body { padding: 20px; }
+  /* ---------- FORM ---------- */
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.005em;
+  }
+  label .hint {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  textarea, input[type="text"] {
+    width: 100%;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text);
+    background: #fcfcfd;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    resize: vertical;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  textarea:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(29,78,216,0.12);
+    background: #fff;
+  }
+  textarea[readonly] { background: #f9fafb; color: var(--text-muted); }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  /* ---------- BUTTONS ---------- */
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    letter-spacing: -0.005em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  button:hover { background: #f9fafb; border-color: #d0d5dd; }
+  button:active { background: #f2f4f7; }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.block { width: 100%; justify-content: center; }
+  button svg { width: 14px; height: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  /* ---------- HELP TEXT ---------- */
+  .help {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+  /* ---------- ALERT ---------- */
+  .alert {
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert.ok { background: #ecfdf3; color: var(--success); border: 1px solid #abefc6; }
+  .alert.err { background: #fef3f2; color: var(--danger); border: 1px solid #fecdca; }
+  /* ---------- FLOW DIAGRAM ---------- */
+  .flow {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 24px;
+  }
+  .flow h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: -0.01em;
+  }
+  .flow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) { .flow-steps { grid-template-columns: 1fr 1fr; } }
+  .flow-step {
+    padding: 14px;
+    background: #fcfcfd;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .flow-step .num {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--text);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 20px;
+    margin-bottom: 8px;
+  }
+  .flow-step strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .flow-step span { color: var(--text-muted); }
+  /* ---------- FOOTER ---------- */
+  footer {
+    text-align: center;
+    padding: 32px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    Cipher
+  </div>
+  <div class="header-actions">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Aucune clé en mémoire</span>
+  </div>
+</header>
+
+<main>
+  <h1 class="page-title">Chiffrement RSA</h1>
+  <p class="page-sub">Échangez des messages chiffrés de bout en bout avec votre binôme.</p>
+
+  <div class="grid">
+
+    <!-- ============ COLONNE GAUCHE ============ -->
+    <div>
+
+      <!-- Carte : mes clés -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <div class="card-title">Identité cryptographique</div>
+          <div class="card-step">Étape 1</div>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label>Clé publique <span class="hint">— à transmettre à votre binôme</span></label>
+            <textarea id="publicKey" rows="4" readonly placeholder="Aucune clé générée"></textarea>
+          </div>
+          <div class="field">
+            <label>Clé privée <span class="hint">— ne quitte jamais cet appareil</span></label>
+            <textarea id="privateKey" rows="6" readonly placeholder="Aucune clé générée"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="primary" onclick="generateKeys()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              Générer une paire de clés
+            </button>
+            <button onclick="copyField('publicKey')">Copier la clé publique</button>
+          </div>
+          <div class="alert ok" id="keyAlert">Paire de clés générée. Vous pouvez copier votre clé publique.</div>
+        </div>
+      </div>
+
+      <!-- Carte : chiffrer -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Chiffrer un message</div>
+          <div class="card-step">Étape 2</div>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label>Clé publique du destinataire</label>
+            <textarea id="recipientKey" rows="3" placeholder="Collez ici la clé publique de votre binôme"></textarea>
+          </div>
+          <div class="field">
+            <label>Message à chiffrer <span class="hint">— 200 caractères maximum</span></label>
+            <textarea id="plainMessage" rows="3" maxlength="200" placeholder="Saisissez votre message"></textarea>
+          </div>
+          <button class="primary block" onclick="encryptMessage()">Chiffrer le message</button>
+          <div class="field" style="margin-top:16px;">
+            <label>Résultat chiffré <span class="hint">— à transmettre au destinataire</span></label>
+            <textarea id="encryptedOutput" rows="5" readonly placeholder="Le texte chiffré apparaîtra ici"></textarea>
+          </div>
+          <div class="btn-row">
+            <button onclick="copyField('encryptedOutput')">Copier le résultat</button>
+          </div>
+          <div class="alert ok" id="encryptAlert">Message chiffré avec succès.</div>
+          <div class="alert err" id="encryptError">Échec du chiffrement. Vérifiez la clé publique et la longueur du message.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ COLONNE DROITE ============ -->
+    <div>
+
+      <!-- Carte : déchiffrer -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Déchiffrer un message</div>
+          <div class="card-step">Étape 3</div>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label>Message chiffré reçu</label>
+            <textarea id="encryptedInput" rows="5" placeholder="Collez ici le message chiffré reçu de votre binôme"></textarea>
+          </div>
+          <button class="primary block" onclick="decryptMessage()">Déchiffrer avec ma clé privée</button>
+          <div class="field" style="margin-top:16px;">
+            <label>Message en clair</label>
+            <textarea id="decryptedOutput" rows="3" readonly placeholder="Le message déchiffré apparaîtra ici"></textarea>
+          </div>
+          <div class="alert ok" id="decryptAlert">Déchiffrement réussi.</div>
+          <div class="alert err" id="decryptError">Échec du déchiffrement. Ce message n'est pas destiné à votre clé privée.</div>
+        </div>
+      </div>
+
+      <!-- Carte : infos -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+          <div class="card-title">Notes techniques</div>
+        </div>
+        <div class="card-body">
+          <p class="help" style="margin-bottom:10px;">
+            <strong style="color:var(--text);">Algorithme</strong><br>
+            RSA 2048 bits, remplissage PKCS#1 v1.5.
+          </p>
+          <p class="help" style="margin-bottom:10px;">
+            <strong style="color:var(--text);">Confidentialité</strong><br>
+            Aucune donnée n'est transmise à un serveur. Tout est calculé localement dans le navigateur.
+          </p>
+          <p class="help">
+            <strong style="color:var(--text);">Échange</strong><br>
+            La clé publique et les messages chiffrés se transmettent manuellement (mail, messagerie, etc.).
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ FLUX ============ -->
+  <div class="flow">
+    <h3>Protocole d'échange entre binômes</h3>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <div class="num">1</div>
+        <strong>Génération</strong>
+        <span>Chaque étudiant génère sa paire de clés sur son navigateur.</span>
+      </div>
+      <div class="flow-step">
+        <div class="num">2</div>
+        <strong>Échange des clés publiques</strong>
+        <span>Les deux binômes s'envoient mutuellement leur clé publique.</span>
+      </div>
+      <div class="flow-step">
+        <div class="num">3</div>
+        <strong>Chiffrement</strong>
+        <span>L'expéditeur chiffre le message avec la clé publique du destinataire.</span>
+      </div>
+      <div class="flow-step">
+        <div class="num">4</div>
+        <strong>Déchiffrement</strong>
+        <span>Le destinataire déchiffre avec sa clé privée, restée locale.</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  TP Cryptographie — Chiffrement asymétrique RSA
+</footer>
+
+<script>
+  function setStatus(text, active) {
+    document.getElementById('statusText').textContent = text;
+    document.getElementById('statusDot').classList.toggle('active', !!active);
+  }
+
+  function showAlert(id, show) {
+    document.getElementById(id).classList.toggle('show', !!show);
+  }
+
+  function generateKeys() {
+    const c = new JSEncrypt({ default_key_size: 2048 });
+    const pub = c.getPublicKey();
+    const priv = c.getPrivateKey();
+    document.getElementById('publicKey').value = pub;
+    document.getElementById('privateKey').value = priv;
+    localStorage.setItem('rsa_pub', pub);
+    localStorage.setItem('rsa_priv', priv);
+    setStatus('Paire de clés en mémoire', true);
+    showAlert('keyAlert', true);
+  }
+
+  window.addEventListener('load', () => {
+    const pub = localStorage.getItem('rsa_pub');
+    const priv = localStorage.getItem('rsa_priv');
+    if (pub && priv) {
+      document.getElementById('publicKey').value = pub;
+      document.getElementById('privateKey').value = priv;
+      setStatus('Paire de clés en mémoire', true);
+    }
+  });
+
+  function encryptMessage() {
+    const key = document.getElementById('recipientKey').value.trim();
+    const msg = document.getElementById('plainMessage').value;
+    const out = document.getElementById('encryptedOutput');
+    showAlert('encryptAlert', false);
+    showAlert('encryptError', false);
+
+    if (!key || !msg) {
+      showAlert('encryptError', true);
+      return;
+    }
+
+    try {
+      const enc = new JSEncrypt();
+      enc.setPublicKey(key);
+      const result = enc.encrypt(msg);
+      if (!result) {
+        showAlert('encryptError', true);
+        out.value = '';
+        return;
+      }
+      out.value = result;
+      showAlert('encryptAlert', true);
+    } catch (e) {
+      showAlert('encryptError', true);
+    }
+  }
+
+  function decryptMessage() {
+    const priv = document.getElementById('privateKey').value.trim();
+    const enc = document.getElementById('encryptedInput').value.trim();
+    const out = document.getElementById('decryptedOutput');
+    showAlert('decryptAlert', false);
+    showAlert('decryptError', false);
+
+    if (!priv || !enc) {
+      showAlert('decryptError', true);
+      return;
+    }
+
+    try {
+      const dec = new JSEncrypt();
+      dec.setPrivateKey(priv);
+      const result = dec.decrypt(enc);
+      if (!result) {
+        showAlert('decryptError', true);
+        out.value = '';
+        return;
+      }
+      out.value = result;
+      showAlert('decryptAlert', true);
+    } catch (e) {
+      showAlert('decryptError', true);
+    }
+  }
+
+  function copyField(id) {
+    const el = document.getElementById(id);
+    if (!el.value) return;
+    navigator.clipboard.writeText(el.value);
+  }
+</script>
+
+</body>
+</html>
